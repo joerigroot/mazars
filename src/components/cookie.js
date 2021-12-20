@@ -4,31 +4,47 @@
   allowedTypes: [],
   orientation: 'HORIZONTAL',
   jsx: (() => {
-    const { analyticsUrl, googleTag } = options;
+    const { hostname, googleTag } = options;
     const { env } = B;
     const isDev = env === 'dev';
 
+    function getCookie(cname) {
+      let name = cname + "=";
+      let decodedCookie = decodeURIComponent(document.cookie);
+      let ca = decodedCookie.split(';');
+      for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) == ' ') {
+          c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+          return c.substring(name.length, c.length);
+        }
+      }
+      return "";
+    }
+
     useEffect(() => {
-      if (window.localStorage.getItem('cookies-accepted') === null) {
+      let mazarsAcceptCookies = getCookie('mazarsAcceptCookies')
+      if (mazarsAcceptCookies != "" && mazarsAcceptCookies != null) {
+        enableAnalytics()
+      } else {
         B.triggerEvent('onCheckCookies')
       }
     })
 
     const enableAnalytics = () => {
-      const analyticsAccepted = window.localStorage.getItem('analytical-cookies')
+      let analyticsAccepted = getCookie('mazarsAcceptAnalytics')
       if (!isDev && analyticsAccepted === 'true') {
         if (
           !document.querySelector('[data-script="google-tag"]') &&
           googleTag.length > 0
         ) {
-          // Google Tag Manager
           const tagScript = document.createElement('script');
           const tagUrl = `https://www.googletagmanager.com/gtag/js?id=${googleTag}`
           tagScript.src = tagUrl;
           tagScript.async = true;
           tagScript.setAttribute('data-script', 'google-tag');
-          document.head.prepend(tagScript);
-          // End Google Tag Manager
 
           const tagScriptDataLayer = document.createElement('script');
           const inlineScript = document.createTextNode(
@@ -39,49 +55,35 @@
           )
 
           tagScriptDataLayer.appendChild(inlineScript);
-          document.head.append(tagScriptDataLayer)
+
+          if (location.hostname === hostname) {
+            if (!document.querySelector('[data-script="google-tag"]')) {
+              document.head.prepend(tagScript);
+              document.head.append(tagScriptDataLayer)
+            }
+          }
         }
 
-        // WAAR WORDT DIT VOOR GEBRUIKT???
-        if (
-          !document.querySelector('[data-script="google-analytics"]') &&
-          analyticsUrl.length > 0
-        ) {
-          // Google Analytics
-          const analyticsScript = document.createElement('script');
-          analyticsScript.src = analyticsUrl;
-          analyticsScript.setAttribute('data-script', 'google-analytics');
-          //document.head.prepend(analyticsScript);
-          // End Google Analytics
-        }
       }
     }
 
-    enableAnalytics()
-
     B.defineFunction('setCookieValue', event => {
-      window.localStorage.setItem('cookies-accepted', true)
+      let oneYearFromNow = new Date();
+      oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+      oneYearFromNow.toGMTString()
+
       if (document.querySelector('input[name="compulsory"]').closest('.MuiCheckbox-root').classList.contains('Mui-checked')) {
-        window.localStorage.setItem('compulsory-cookies', true)
-      } else {
-        window.localStorage.removeItem('compulsory-cookies')
+        document.cookie = `mazarsAcceptCookies=true; expires=${oneYearFromNow}`;
       }
       if (document.querySelector('input[name="analytical"]').closest('.MuiCheckbox-root').classList.contains('Mui-checked')) {
-        window.localStorage.setItem('analytical-cookies', true)
-      } else {
-        window.localStorage.removeItem('analytical-cookies')
+        document.cookie = `mazarsAcceptAnalytics=true; expires=${oneYearFromNow}`;
+        enableAnalytics()
       }
-      if (document.querySelector('input[name="marketing"]').closest('.MuiCheckbox-root').classList.contains('Mui-checked')) {
-        window.localStorage.setItem('marketing-cookies', true)
-      } else {
-        window.localStorage.removeItem('marketing-cookies')
-      }
-      enableAnalytics()
     })
 
     const imgUrl = 'https://assets.bettyblocks.com/b809f00297c044f99d1a9f4b1752f16b_assets/files/Cookie.svg';
 
-    return isDev ? <div className={classes.empty}><img src={imgUrl} alt='cookies' /><h3>Cookies configuration</h3></div> : <></>;
+    return isDev ? <div className={classes.empty}><img src={imgUrl} alt='cookies' /><h3>ACookies configuration</h3></div> : <></>;
   })(),
   styles: B => theme => {
     const style = new B.Styling(theme);

@@ -9,7 +9,7 @@
         {
           type: 'TEXT',
           label: 'Analytics Hostname',
-          key: 'analyticsUrl',
+          key: 'hostname',
           value: '',
         },
         {
